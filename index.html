@@ -1,85 +1,94 @@
 <!DOCTYPE html>
+<!--
+ Copyright 2020 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Phishing Link Detection</title>
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      function _gtag() {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push(arguments);
+      }
+      _gtag('js', new Date());
+    </script>
+    <meta name="msapplication-TileColor" content="#681da8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#681da8" />
+    <meta
+      name="description"
+      content="A local-first UI for Firebase Emulator Suite."
+    />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="/manifest.json?v=4" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/apple-touch-icon.png?v=4"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon-32x32.png?v=4"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/favicon-16x16.png?v=4"
+    />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg?v=4" color="#681da8" />
+    <link rel="icon" href="/favicon.ico?v=4" />
+    <title>Firebase Emulator Suite</title>
 
-    <style>
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #1976D2;
-            font-family: Arial, sans-serif;
-        }
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto Mono:300,400,500"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <!-- More icons needed for Storage, in addition to the base ones above. -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Extended"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="/assets/index-BX-A56oj.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CjB9C900.css">
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
 
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            width: 300px;
-            text-align: center;
-        }
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #1976D2;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 15px;
-        }
-
-        #result {
-            margin-top: 15px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="container">
-    <h3>Phishing Detector</h3>
-
-    <input type="text" id="linkInput" placeholder="Enter website link">
-
-    <button onclick="checkLink()">Check Link</button>
-
-    <div id="result"></div>
-</div>
-
-<script>
-    function checkLink() {
-        let url = document.getElementById("linkInput").value.toLowerCase();
-        let result = document.getElementById("result");
-
-        if (
-            url.includes("@") ||
-            url.includes("login") ||
-            url.includes("verify") ||
-            url.includes("bank") ||
-            url.length > 75
-        ) {
-            result.innerHTML = "⚠ PHISHING LINK";
-            result.style.color = "red";
-        } else {
-            result.innerHTML = "✅ SAFE LINK";
-            result.style.color = "green";
-        }
-    }
-</script>
-
-</body>
+      See README.md at repository root for how to start development or build a production bundle.
+    -->
+  </body>
 </html>
