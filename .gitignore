@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Backend files
+backend/phishing_detector.db
+backend/phishing_model.pkl
+backend/__pycache__/
+backend/*.pyc
+backend/venv/
