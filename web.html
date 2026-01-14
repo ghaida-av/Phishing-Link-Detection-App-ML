@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Phishing Link Detection App</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Times New Roman", sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #0d1b2a;
+            color: #e0e6ed;
+        }
+        h1, h2 {
+            margin: 0 0 16px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .card {
+            flex: 1 1 180px;
+            background: #1b263b;
+            padding: 16px 18px;
+            border-radius: 10px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+        }
+        .card-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9fb3c8;
+            margin-bottom: 6px;
+        }
+        .card-value {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .card.safe .card-value {
+            color: #2ecc71;
+        }
+        .card.phishing .card-value {
+            color: #e74c3c;
+        }
+        .card.total .card-value {
+            color: #3498db;
+        }
+        .card.emails .card-value {
+            color: #f1c40f;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            background: #1b263b;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+        }
+        th, td {
+            padding: 10px 12px;
+            font-size: 13px;
+            text-align: left;
+        }
+        th {
+            background: #111827;
+            color: #9fb3c8;
+            font-weight: 500;
+        }
+        tr:nth-child(even) td {
+            background: rgba(255,255,255,0.01);
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge.phishing {
+            background: rgba(231,76,60,0.12);
+            color: #ff6b6b;
+        }
+        .badge.safe {
+            background: rgba(46,204,113,0.12);
+            color: #2ecc71;
+        }
+        .badge.url {
+            background: rgba(52,152,219,0.12);
+            color: #3498db;
+        }
+        .badge.email {
+            background: rgba(241,196,15,0.12);
+            color: #f1c40f;
+        }
+        .muted {
+            color: #9fb3c8;
+            font-size: 12px;
+        }
+        .url-cell {
+            max-width: 360px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .checker {
+            margin-top: 16px;
+            margin-bottom: 24px;
+            background: #1b263b;
+            padding: 16px 18px;
+            border-radius: 10px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+        }
+        .checker form {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .checker input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+        }
+        .checker button {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background: #2563eb;
+            color: #f9fafb;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .checker button:hover {
+            background: #1d4ed8;
+        }
+        .result-text {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .result-intel {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #9fb3c8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phishing Link Detection App</h1>
+
+        <div class="checker">
+            <div class="card-label">Enter URL  </div>
+            <form method="post">
+                <input
+                    type="text"
+                    name="url"
+                    placeholder="Enter  URL"
+                    value="{{ input_value or '' }}"
+                    autocomplete="off"
+                />
+                <button type="submit">Enter URL</button>
+            </form>
+
+            {% if result %}
+            <div class="result-text">
+                {% if result.verdict == 'PHISHING' %}
+                    <span class="badge phishing">PHISHING {{ result.url_type|upper }}</span>
+                {% elif result.verdict == 'SAFE' %}
+                    <span class="badge safe">SAFE {{ result.url_type|upper }}</span>
+                {% elif result.verdict == 'INVALID' %}
+                    <span class="badge">INVALID</span>
+                {% else %}
+                    <span class="badge">UNKNOWN</span>
+                {% endif %}
+            </div>
+            {% if result.threat_intel %}
+            <div class="result-intel">
+                {% set whois = result.threat_intel.whois %}
+                {% set flags = result.threat_intel.flags %}
+                {% if whois and whois.success %}
+                    Domain: {{ whois.domain }} ({{ whois.age_days }} days old)
+                {% endif %}
+                {% if flags %}
+                    {% if flags.listed_in_blacklist %}
+                        &nbsp; • Blacklist: flagged
+                    {% else %}
+                        &nbsp; • Blacklist: not flagged
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="cards">
+            <div class="card total">
+                <div class="card-label">Total Checks</div>
+                <div class="card-value">{{ stats.total }}</div>
+            </div>
+            <div class="card phishing">
+                <div class="card-label">Phishing</div>
+                <div class="card-value">{{ stats.phishing }}</div>
+            </div>
+            <div class="card safe">
+                <div class="card-label">Safe</div>
+                <div class="card-value">{{ stats.safe }}</div>
+            </div>
+            <div class="card">
+                <div class="card-label">URLs</div>
+                <div class="card-value">{{ stats.urls }}</div>
+            </div>
+            <div class="card emails">
+                <div class="card-label">Emails</div>
+                <div class="card-value">{{ stats.emails }}</div>
+            </div>
+        </div>
+
+        <h2>Recent Detections</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>URL / Email</th>
+                    <th>Type</th>
+                    <th>Verdict</th>
+                    <th>When</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recent %}
+                <tr>
+                    <td class="url-cell" title="{{ item.url }}">{{ item.url }}</td>
+                    <td>
+                        <span class="badge {{ 'url' if item.url_type == 'url' else 'email' }}">
+                            {{ item.url_type|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if item.is_phishing %}
+                        <span class="badge phishing">PHISHING</span>
+                        {% else %}
+                        <span class="badge safe">SAFE</span>
+                        {% endif %}
+                    </td>
+                    <td class="muted">{{ item.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+
