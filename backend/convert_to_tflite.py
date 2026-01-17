@@ -1,0 +1,81 @@
+"""
+Convert scikit-learn model to TensorFlow Lite
+This script creates a TensorFlow model with the same feature extraction
+and converts it to TensorFlow Lite for Android
+"""
+import numpy as np
+try:
+    import tensorflow as tf
+except ImportError:
+    print("TensorFlow not installed. Installing...")
+    import subprocess
+    subprocess.check_call(["pip", "install", "tensorflow"])
+    import tensorflow as tf
+
+from ml_model import PhishingURLDetector
+import os
+
+def create_tf_model():
+    """Create a TensorFlow model equivalent to the scikit-learn model"""
+    # Load the existing scikit-learn model to get training data
+    detector = PhishingURLDetector()
+    
+    # Generate training data
+    print("Generating training data...")
+    X, y = detector.generate_training_data()
+    
+    print(f"Training TensorFlow model on {len(X)} samples...")
+    print(f"Feature vector size: {X.shape[1]}")
+    
+    # Create a simple neural network model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    # Train the model
+    model.fit(X, y, epochs=50, batch_size=16, verbose=1, validation_split=0.2)
+    
+    # Evaluate
+    loss, accuracy = model.evaluate(X, y, verbose=0)
+    print(f"Model accuracy: {accuracy:.2%}")
+    
+    return model
+
+def convert_to_tflite(model, output_path='phishing_model.tflite'):
+    """Convert TensorFlow model to TensorFlow Lite"""
+    print(f"Converting to TensorFlow Lite...")
+    
+    # Convert to TFLite
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    
+    tflite_model = converter.convert()
+    
+    # Save the model
+    with open(output_path, 'wb') as f:
+        f.write(tflite_model)
+    
+    print(f"TensorFlow Lite model saved to {output_path}")
+    print(f"Model size: {len(tflite_model) / 1024:.2f} KB")
+    
+    return output_path
+
+if __name__ == "__main__":
+    print("Creating TensorFlow model...")
+    model = create_tf_model()
+    
+    print("\nConverting to TensorFlow Lite...")
+    tflite_path = convert_to_tflite(model)
+    
+    print(f"\n✅ Success! Model saved to: {tflite_path}")
+    print("Copy this file to: app/src/main/assets/phishing_model.tflite")
