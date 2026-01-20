@@ -18,17 +18,14 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
-    // Change this to your backend server IP/URL
-    // For emulator: use "10.0.2.2" instead of "localhost"
-    // For physical device: use your computer's IP address on the same network
-    private val BASE_URL = "http://10.0.2.2:5001"  // Emulator
-    // private val BASE_URL = "http://YOUR_COMPUTER_IP:5001"  // Physical device
+    private val burl = "http://10.0.2.2:5001"  //emulator
+    // private val burl = "http://****_IP:5001"  // Physical device
 
-    private lateinit var linkInput: EditText
-    private lateinit var checkBtn: Button
-    private lateinit var resultText: TextView
-    private lateinit var statusText: TextView
-    private lateinit var intelText: TextView
+    private lateinit var link: EditText
+    private lateinit var check: Button
+    private lateinit var result: TextView
+    private lateinit var status: TextView
+    private lateinit var intel: TextView
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -39,18 +36,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        linkInput = findViewById(R.id.linkInput)
-        checkBtn = findViewById(R.id.checkBtn)
-        resultText = findViewById(R.id.resultText)
-        statusText = findViewById(R.id.statusText)
-        intelText = findViewById(R.id.intelText)
+        link = findViewById(R.id.link)
+        check = findViewById(R.id.check)
+        result = findViewById(R.id.result)
+        status = findViewById(R.id.status)
+        intel = findViewById(R.id.intel)
 
-        checkBtn.setOnClickListener {
-            val input = linkInput.text.toString().trim()
+        check.setOnClickListener {
+            val input = link.text.toString().trim()
             
             if (input.isEmpty()) {
-                resultText.text = "Please enter a URL or email"
-                statusText.text = ""
+                result.text = "Please enter a URL or email"
+                status.text = ""
                 return@setOnClickListener
             }
 
@@ -59,10 +56,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkUrl(url: String) {
-        resultText.text = "Checking..."
-        statusText.text = ""
-        intelText.text = ""
-        checkBtn.isEnabled = false
+        result.text = "Checking..."
+        status.text = ""
+        intel.text = ""
+        check.isEnabled = false
 
         lifecycleScope.launch {
             try {
@@ -72,14 +69,14 @@ class MainActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     displayResult(result)
-                    checkBtn.isEnabled = true
+                    check.isEnabled = true
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    resultText.text = "❌ Error: ${e.message}"
-                    statusText.text = "Check your connection and server URL"
-                    intelText.text = ""
-                    checkBtn.isEnabled = true
+                    result.text = "❌ Error: ${e.message}"
+                    status.text = "Check your connection and server URL"
+                    intel.text = ""
+                    check.isEnabled = true
                 }
             }
         }
@@ -107,7 +104,7 @@ class MainActivity : AppCompatActivity() {
 
         val jsonResponse = JSONObject(responseBody)
 
-        // Parse high-level threat intel fields
+        //  high-level threat intel 
         val threatIntel = jsonResponse.optJSONObject("threat_intel")
 
         var domainInfo: String? = null
@@ -119,16 +116,16 @@ class MainActivity : AppCompatActivity() {
             val gsb = threatIntel.optJSONObject("google_safe_browsing")
             val phish = threatIntel.optJSONObject("phishtank")
 
-            // Domain age info
+            // Domain age 
             if (whois != null && whois.optBoolean("success", false)) {
                 val domain = whois.optString("domain", "")
                 val ageDays = whois.optInt("age_days", -1)
                 if (ageDays >= 0 && domain.isNotEmpty()) {
-                    domainInfo = "Domain: $domain ($ageDays days old)"
+                    domn = "Domain: $domain ($ageDays days old)"
                 }
             }
 
-            // Blacklist info
+            // Blacklist 
             val listed = flags?.optBoolean("listed_in_blacklist", false) ?: false
             if (listed) {
                 val sources = mutableListOf<String>()
@@ -143,9 +140,9 @@ class MainActivity : AppCompatActivity() {
                     sources.add("Google Safe Browsing")
                 }
                 val src = if (sources.isNotEmpty()) sources.joinToString(", ") else "blacklist"
-                blacklistInfo = "Blacklist: flagged by $src"
+                blacklist = "Blacklist: flagged by $src"
             } else {
-                blacklistInfo = "Blacklist: not flagged"
+                blacklist = "Blacklist: not flagged"
             }
         }
 
@@ -155,39 +152,39 @@ class MainActivity : AppCompatActivity() {
             confidence = jsonResponse.optDouble("confidence", 0.0),
             fromCache = jsonResponse.optBoolean("from_cache", false),
             message = jsonResponse.optString("message", ""),
-            domainInfo = domainInfo,
-            blacklistInfo = blacklistInfo
+            domn = domn,
+            blacklist = blacklist
         )
     }
 
     private fun displayResult(result: ApiResponse) {
         when (result.verdict) {
             "PHISHING" -> {
-                resultText.text = "⚠ PHISHING ${result.urlType.uppercase()}"
-                resultText.setTextColor(getColor(android.R.color.holo_red_dark))
+                result.text = "⚠ PHISHING ${result.urlType.uppercase()}"
+                result.setTextColor(getColor(android.R.color.holo_red_dark))
             }
             "SAFE" -> {
-                resultText.text = "✅ SAFE ${result.urlType.uppercase()}"
-                resultText.setTextColor(getColor(android.R.color.holo_green_dark))
+                result.text = "✅ SAFE ${result.urlType.uppercase()}"
+                result.setTextColor(getColor(android.R.color.holo_green_dark))
             }
             "INVALID" -> {
-                resultText.text = "❌ INVALID INPUT"
-                resultText.setTextColor(getColor(android.R.color.darker_gray))
+                result.text = "❌ INVALID INPUT"
+                result.setTextColor(getColor(android.R.color.darker_gray))
             }
             else -> {
-                resultText.text = "❓ UNKNOWN"
-                resultText.setTextColor(getColor(android.R.color.darker_gray))
+                result.text = "❓ UNKNOWN"
+                result.setTextColor(getColor(android.R.color.darker_gray))
             }
         }
 
         val cacheInfo = if (result.fromCache) " (from cache)" else ""
         val confidencePercent = (result.confidence * 100).toInt()
-        statusText.text = "Confidence: $confidencePercent%$cacheInfo"
+        staus.text = "Confidence: $confidencePercent%$cacheInfo"
 
         val lines = mutableListOf<String>()
-        result.domainInfo?.let { lines.add(it) }
-        result.blacklistInfo?.let { lines.add(it) }
-        intelText.text = lines.joinToString("\n")
+        result.domn?.let { lines.add(it) }
+        result.blacklist?.let { lines.add(it) }
+        intel.text = lines.joinToString("\n")
     }
 
     data class ApiResponse(
@@ -196,7 +193,7 @@ class MainActivity : AppCompatActivity() {
         val confidence: Double,
         val fromCache: Boolean,
         val message: String,
-        val domainInfo: String?,
-        val blacklistInfo: String?
+        val domn: String?,
+        val blacklist: String?
     )
 }
