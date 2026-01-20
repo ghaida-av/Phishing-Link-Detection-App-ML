@@ -9,12 +9,12 @@ from urllib.parse import urlparse
 class URLValidator:
     """Validates URLs and emails, differentiates between them"""
     
-    # Email regex pattern
+    # Email  pattern
     EMAIL_PATTERN = re.compile(
         r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     )
     
-    # URL regex pattern (more comprehensive)
+    # URL  pattern 
     URL_PATTERN = re.compile(
         r'^https?://'  # http:// or https://
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
@@ -24,8 +24,8 @@ class URLValidator:
         r'(?:/?|[/?]\S+)$', re.IGNORECASE
     )
     
-    # Simplified URL pattern (for URLs without protocol)
-    URL_PATTERN_SIMPLE = re.compile(
+    # for URLs without protocol
+    URLPATTERN = re.compile(
         r'^(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'
         r'localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
         r'(?::\d+)?(?:/?|[/?]\S+)?$', re.IGNORECASE
@@ -33,7 +33,7 @@ class URLValidator:
     
     @staticmethod
     def is_email(text: str) -> bool:
-        """Check if input is an email address"""
+        """Check if input is  email address"""
         if not text:
             return False
         
@@ -48,19 +48,19 @@ class URLValidator:
         
         text = text.strip()
         
-        # Check if it's an email first (emails can contain URLs in some contexts)
+        # Check if it is  email  
         if URLValidator.is_email(text):
             return False
         
-        # Check full URL pattern (with protocol)
+        # Check full URL pattern with protocol
         if URLValidator.URL_PATTERN.match(text):
             return True
         
-        # Check simple URL pattern (without protocol)
-        if URLValidator.URL_PATTERN_SIMPLE.match(text):
+        # Check  URL pattern without protocol
+        if URLValidator.URLPATTERN .match(text):
             return True
         
-        # Additional check: if it starts with www. or contains common TLDs
+        #  if it starts with www. or contains common TLDs
         if text.lower().startswith('www.'):
             return True
         
