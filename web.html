@@ -160,6 +160,22 @@
     </div>
 
     <script>
+        // -------------------------
+        // Beginner-friendly helpers
+        // -------------------------
+        function normalizeUrl(url) {
+            // The browser URL(...) needs a protocol. If missing, add http://
+            return url.includes('://') ? url : 'http://' + url;
+        }
+
+        function safeParseUrl(url) {
+            try {
+                return new URL(normalizeUrl(url));
+            } catch (e) {
+                return null;
+            }
+        }
+
         // Feature extraction (simplified version matching Android app)
         function extractFeatures(url) {
             const urlLower = url.toLowerCase();
@@ -181,18 +197,42 @@
             features.push(url.startsWith('http://') ? 1 : 0);
             features.push(urlLower.includes('https') ? 1 : 0);
 
-            // Suspicious keywords (1)
+            // Suspicious keywords (1) - enhanced
             const suspiciousKeywords = ['login', 'verify', 'bank', 'secure', 'account', 
                                        'update', 'confirm', 'suspend', 'click', 'here',
-                                       'free', 'win', 'prize', 'urgent', 'limited'];
+                                       'free', 'win', 'prize', 'urgent', 'limited',
+                                       'password', 'reset', 'unlock', 'activate', 'validate',
+                                       'security', 'alert', 'warning', 'expired', 'locked'];
             const keywordCount = suspiciousKeywords.filter(kw => urlLower.includes(kw)).length;
             features.push(keywordCount);
 
-            // Domain features (5) - simplified
+            // Additional phishing patterns (3 features)
+            // URL shortening services abuse
+            const urlShorteners = ['bit.ly', 'tinyurl', 'goo.gl', 't.co', 'ow.ly'];
+            features.push(urlShorteners.some(short => urlLower.includes(short)) ? 1 : 0);
+            
+            // Multiple suspicious patterns combined
+            const hasMultipleSuspicious = keywordCount > 2 && (url.match(/-/g) || []).length > 2;
+            features.push(hasMultipleSuspicious ? 1 : 0);
+            
+            // Path contains suspicious patterns
+            const suspiciousPathPatterns = ['/login', '/verify', '/secure', '/account', '/update'];
+            let hasSuspiciousPath = false;
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
+                hasSuspiciousPath = suspiciousPathPatterns.some(pattern => urlObj.pathname.toLowerCase().includes(pattern));
+            } catch (e) {
+                // ignore
+            }
+            features.push(hasSuspiciousPath ? 1 : 0);
+
+            // Domain features (8) - enhanced
+            try {
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const domain = urlObj.hostname || urlObj.pathname.split('/')[0];
+                const domainLower = domain.toLowerCase();
                 
                 features.push(domain.length);
                 features.push((domain.match(/\./g) || []).length);
@@ -201,21 +241,34 @@
                 const ipPattern = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/;
                 features.push(ipPattern.test(domain) ? 1 : 0);
                 
-                // Suspicious TLDs
-                const suspiciousTlds = ['.tk', '.ml', '.ga', '.cf', '.gq'];
-                features.push(suspiciousTlds.some(tld => domain.includes(tld)) ? 1 : 0);
+                // Suspicious TLDs (enhanced)
+                const suspiciousTlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', '.top', '.click'];
+                features.push(suspiciousTlds.some(tld => domainLower.includes(tld)) ? 1 : 0);
                 
-                // Common domains
-                const commonDomains = ['google', 'facebook', 'amazon', 'microsoft', 'apple', 'paypal'];
-                features.push(commonDomains.some(cd => domain.includes(cd)) ? 1 : 0);
+                // Common domains (typosquatting indicator)
+                const commonDomains = ['google', 'facebook', 'amazon', 'microsoft', 'apple', 'paypal',
+                                     'netflix', 'twitter', 'instagram', 'linkedin', 'ebay', 'yahoo'];
+                features.push(commonDomains.some(cd => domainLower.includes(cd)) ? 1 : 0);
+                
+                // Typosquatting pattern detection
+                const typosquattingPatterns = ['go0gle', 'g00gle', 'faceb00k', 'amaz0n', 'micr0soft',
+                                              'paypa1', 'app1e', 'tw1tter', '1nstagram'];
+                features.push(typosquattingPatterns.some(pattern => domainLower.includes(pattern)) ? 1 : 0);
+                
+                // Subdomain abuse (multiple subdomains)
+                const subdomainCount = (domain.match(/\./g) || []).length - 1;
+                features.push(subdomainCount > 2 ? 1 : 0);
+                
+                // Hyphen in domain (suspicious)
+                features.push(domain.includes('-') ? 1 : 0);
             } catch (e) {
-                features.push(0, 0, 0, 0, 0);
+                features.push(0, 0, 0, 0, 0, 0, 0, 0);
             }
 
             // Path features (2)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const path = urlObj.pathname;
                 features.push(path.length);
                 features.push((path.match(/\//g) || []).length);
@@ -225,8 +278,8 @@
 
             // Query features (2)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const query = urlObj.search.substring(1);
                 features.push(query.length);
                 features.push((query.match(/&/g) || []).length);
@@ -236,8 +289,8 @@
 
             // Port (1)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const port = urlObj.port;
                 features.push(port && port !== '80' && port !== '443' ? 1 : 0);
             } catch (e) {
@@ -254,37 +307,63 @@
             return features;
         }
 
-        // Simple ML-based detection (client-side rule-based matching the model logic)
+        // Enhanced ML-based detection using all phishing patterns
         function detectPhishing(url) {
             const features = extractFeatures(url);
             
-            // Simple scoring based on features (mimics ML model behavior)
+            // Comprehensive scoring based on all features
             let score = 0;
             
-            // URL length (longer = more suspicious)
-            if (features[0] > 75) score += 0.2;
-            if (features[0] > 100) score += 0.2;
+            // URL length (longer = more suspicious, but not the only factor)
+            if (features[0] > 75) score += 0.1;
+            if (features[0] > 100) score += 0.15;
             
-            // Suspicious keywords
-            score += features[13] * 0.15;
+            // Suspicious keywords (weighted by count)
+            score += Math.min(features[13] * 0.12, 0.4); // Cap at 0.4
             
-            // Suspicious TLDs
+            // URL shorteners (highly suspicious)
+            if (features[14] === 1) score += 0.25;
+            
+            // Multiple suspicious patterns combined
+            if (features[15] === 1) score += 0.3;
+            
+            // Suspicious path patterns
+            if (features[16] === 1) score += 0.2;
+            
+            // Suspicious TLDs (highly suspicious)
+            if (features[20] === 1) score += 0.35;
+            
+            // IP address in domain (very suspicious)
             if (features[19] === 1) score += 0.3;
             
-            // IP address in domain
-            if (features[18] === 1) score += 0.25;
+            // Typosquatting patterns (very suspicious)
+            if (features[22] === 1) score += 0.4;
+            
+            // Subdomain abuse
+            if (features[23] === 1) score += 0.2;
+            
+            // Hyphen in domain (moderate suspicion)
+            if (features[24] === 1) score += 0.15;
+            
+            // Common domain with suspicious patterns (typosquatting)
+            if (features[21] === 1 && (features[22] === 1 || features[20] === 1)) {
+                score += 0.3; // Common domain + suspicious TLD/typo = very suspicious
+            }
             
             // Non-standard port
-            if (features[25] === 1) score += 0.1;
+            if (features[27] === 1) score += 0.1;
             
-            // High digit ratio
-            if (features[26] > 0.3) score += 0.1;
+            // High digit ratio (obfuscation)
+            if (features[28] > 0.3) score += 0.15;
             
-            // Contains @ (email-like in URL)
-            if (features[7] > 0) score += 0.4;
+            // Contains @ (only moderate weight, not the main factor)
+            if (features[7] > 0) score += 0.15; // Reduced from 0.4
             
-            // No HTTPS
+            // No HTTPS (moderate)
             if (features[9] === 0 && features[10] === 0) score += 0.1;
+            
+            // Multiple hyphens (suspicious)
+            if (features[2] > 3) score += 0.15;
             
             // Normalize score to 0-1
             const probability = Math.min(score, 1.0);

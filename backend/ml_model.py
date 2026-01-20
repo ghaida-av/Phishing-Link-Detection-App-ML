@@ -1,3 +1,7 @@
+"""
+ML Model for Phishing URL Detection
+Uses feature extraction and a trained classifier
+"""
 import re
 import pickle
 import os
@@ -15,6 +19,22 @@ class PhishingURLDetector:
         self.model = None
         self.model_path = 'phishing_model.pkl'
         self.load_or_train_model()
+
+    # ----------------------------
+    # Beginner-friendly helpers
+    # ----------------------------
+    @staticmethod
+    def _normalize_url(url: str) -> str:
+        """Add a protocol if missing (so urlparse works consistently)."""
+        return url if '://' in url else 'http://' + url
+
+    @staticmethod
+    def _safe_urlparse(url: str):
+        """Parse URL safely. Returns None if parsing fails."""
+        try:
+            return urlparse(PhishingURLDetector._normalize_url(url))
+        except Exception:
+            return None
     
     def extract_features(self, url):
         """
@@ -22,87 +42,117 @@ class PhishingURLDetector:
         Returns a feature vector
         """
         features = []
-        
-        # Basic URL features
-        features.append(len(url))  # URL length
-        features.append(url.count('.'))  # no of dots
-        features.append(url.count('-'))  # no of hyphens
-        features.append(url.count('_'))  # no of underscores
-        features.append(url.count('/'))  # no of slashes
-        features.append(url.count('?'))  # no of question marks
-        features.append(url.count('='))  # no of equals signs
-        features.append(url.count('@'))  # no of @ symbols
-        features.append(url.count('&'))  # no of ampersands
-        
-        # Protocol 
+        url_lower = url.lower()
+
+        # -------- 1) Basic URL features (9) --------
+        features.append(len(url))           # URL length
+        features.append(url.count('.'))     # dots
+        features.append(url.count('-'))     # hyphens
+        features.append(url.count('_'))     # underscores
+        features.append(url.count('/'))     # slashes
+        features.append(url.count('?'))     # question marks
+        features.append(url.count('='))     # equals signs
+        features.append(url.count('@'))     # @ symbols
+        features.append(url.count('&'))     # ampersands
+
+        # -------- 2) Protocol features (3) --------
         features.append(1 if url.startswith('https://') else 0)
         features.append(1 if url.startswith('http://') else 0)
-        features.append(1 if 'https' in url.lower() else 0)
-        
-        # Suspicious keywords
-        suspiciouswords = ['login', 'verify', 'bank', 'secure', 'account', 
-                              'update', 'confirm', 'suspend', 'click', 'here',
-                              'free', 'win', 'prize', 'urgent', 'limited']
-        wordcount = sum(1 for keyword in suspiciouswords if keyword in url.lower())
-        features.append(wordcount)
-        
-        # Domain features
+        features.append(1 if 'https' in url_lower else 0)
+
+        # -------- 3) Suspicious keyword count (1) --------
+        suspicious_keywords = [
+            'login', 'verify', 'bank', 'secure', 'account',
+            'update', 'confirm', 'suspend', 'click', 'here',
+            'free', 'win', 'prize', 'urgent', 'limited',
+            'password', 'reset', 'unlock', 'activate', 'validate',
+            'security', 'alert', 'warning', 'expired', 'locked',
+        ]
+        keyword_count = sum(1 for k in suspicious_keywords if k in url_lower)
+        features.append(keyword_count)
+
+        # -------- 4) Extra phishing pattern features (3) --------
+        url_shorteners = ['bit.ly', 'tinyurl', 'goo.gl', 't.co', 'ow.ly']
+        features.append(1 if any(s in url_lower for s in url_shorteners) else 0)
+
+        has_multiple_suspicious = keyword_count > 2 and url.count('-') > 2
+        features.append(1 if has_multiple_suspicious else 0)
+
+        suspicious_path_patterns = ['/login', '/verify', '/secure', '/account', '/update']
+        parsed = self._safe_urlparse(url)
+        if parsed is not None:
+            path_lower = (parsed.path or '').lower()
+            features.append(1 if any(p in path_lower for p in suspicious_path_patterns) else 0)
+        else:
+            features.append(0)
+
+        # -------- 5) Domain features (8) --------
         try:
-            parsed = urlparse(url if '://' in url else 'http://' + url)
-            domain = parsed.netloc or parsed.path.split('/')[0]
-            
-            features.append(len(domain))  # Domain length
-            features.append(domain.count('.'))  # Subdomain count
-            
-            # Check  IP address  domain
+            parsed2 = parsed if parsed is not None else urlparse(self._normalize_url(url))
+            domain = parsed2.netloc or (parsed2.path.split('/')[0] if parsed2.path else '')
+            domain_lower = domain.lower()
+
+            features.append(len(domain))        # domain length
+            features.append(domain.count('.'))  # dot count in domain
+
             ip_pattern = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
             features.append(1 if re.search(ip_pattern, domain) else 0)
-            
-            # Check  suspicious TLD
-            suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq']
-            features.append(1 if any(tld in domain.lower() for tld in suspicious_tlds) else 0)
-            
-            # Check  homoglyph/typosquatting
-            common_domains = ['google', 'facebook', 'amazon', 'microsoft', 'apple', 'paypal']
-            features.append(1 if any(cd in domain.lower() for cd in common_domains) else 0)
-            
-        except:
-            features.extend([0, 0, 0, 0, 0])
-        
-        # Path 
+
+            suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', '.top', '.click']
+            features.append(1 if any(tld in domain_lower for tld in suspicious_tlds) else 0)
+
+            common_domains = [
+                'google', 'facebook', 'amazon', 'microsoft', 'apple', 'paypal',
+                'netflix', 'twitter', 'instagram', 'linkedin', 'ebay', 'yahoo',
+            ]
+            features.append(1 if any(cd in domain_lower for cd in common_domains) else 0)
+
+            typosquatting_patterns = [
+                'go0gle', 'g00gle', 'faceb00k', 'amaz0n', 'micr0soft',
+                'paypa1', 'app1e', 'tw1tter', '1nstagram',
+            ]
+            features.append(1 if any(tp in domain_lower for tp in typosquatting_patterns) else 0)
+
+            subdomain_count = domain.count('.') - 1
+            features.append(1 if subdomain_count > 2 else 0)
+
+            features.append(1 if '-' in domain else 0)
+        except Exception:
+            features.extend([0, 0, 0, 0, 0, 0, 0, 0])
+
+        # -------- 6) Path features (2) --------
         try:
-            parsed = urlparse(url if '://' in url else 'http://' + url)
-            path = parsed.path
+            parsed3 = parsed if parsed is not None else urlparse(self._normalize_url(url))
+            path = parsed3.path or ''
             features.append(len(path))
             features.append(path.count('/'))
-        except:
+        except Exception:
             features.extend([0, 0])
-        
-        # Query string 
+
+        # -------- 7) Query features (2) --------
         try:
-            parsed = urlparse(url if '://' in url else 'http://' + url)
-            query = parsed.query
+            parsed4 = parsed if parsed is not None else urlparse(self._normalize_url(url))
+            query = parsed4.query or ''
             features.append(len(query))
             features.append(query.count('&'))
-        except:
+        except Exception:
             features.extend([0, 0])
-        
-        # Port number
+
+        # -------- 8) Port feature (1) --------
         try:
-            parsed = urlparse(url if '://' in url else 'http://' + url)
-            port = parsed.port
+            parsed5 = parsed if parsed is not None else urlparse(self._normalize_url(url))
+            port = parsed5.port
             features.append(1 if port and port not in [80, 443] else 0)
-        except:
+        except Exception:
             features.append(0)
-        
-        # Digit ratio
+
+        # -------- 9) Character ratio features (2) --------
+        length = len(url) if len(url) > 0 else 1
         digit_count = sum(1 for c in url if c.isdigit())
-        features.append(digit_count / len(url) if len(url) > 0 else 0)
-        
-        # Letter ratio
         letter_count = sum(1 for c in url if c.isalpha())
-        features.append(letter_count / len(url) if len(url) > 0 else 0)
-        
+        features.append(digit_count / length)
+        features.append(letter_count / length)
+
         return np.array(features)
     
     def generate_training_data(self):

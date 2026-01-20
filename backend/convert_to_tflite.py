@@ -3,7 +3,10 @@ Convert scikit-learn model to TensorFlow Lite
 This script creates a TensorFlow model with the same feature extraction
 and converts it to TensorFlow Lite for Android
 """
-import numpy as np
+
+# This script is intentionally simple: train a small Keras model using the same
+# feature extractor/training data, then export to `.tflite` for Android.
+
 try:
     import tensorflow as tf
 except ImportError:
@@ -13,21 +16,18 @@ except ImportError:
     import tensorflow as tf
 
 from ml_model import PhishingURLDetector
-import os
 
 def create_tf_model():
-    """Create a TensorFlow model equivalent to the scikit-learn model"""
-    # Load the existing scikit-learn model to get training data
+    """Train a small TensorFlow model using the same training data/features."""
     detector = PhishingURLDetector()
-    
-    # Generate training data
+
     print("Generating training data...")
     X, y = detector.generate_training_data()
-    
+
     print(f"Training TensorFlow model on {len(X)} samples...")
     print(f"Feature vector size: {X.shape[1]}")
-    
-    # Create a simple neural network model
+
+    # A small neural network is enough for this toy dataset.
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
         tf.keras.layers.Dropout(0.2),
@@ -35,39 +35,34 @@ def create_tf_model():
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    
+
     model.compile(
         optimizer='adam',
         loss='binary_crossentropy',
         metrics=['accuracy']
     )
-    
-    # Train the model
+
     model.fit(X, y, epochs=50, batch_size=16, verbose=1, validation_split=0.2)
-    
-    # Evaluate
-    loss, accuracy = model.evaluate(X, y, verbose=0)
+
+    _, accuracy = model.evaluate(X, y, verbose=0)
     print(f"Model accuracy: {accuracy:.2%}")
-    
+
     return model
 
 def convert_to_tflite(model, output_path='phishing_model.tflite'):
-    """Convert TensorFlow model to TensorFlow Lite"""
-    print(f"Converting to TensorFlow Lite...")
-    
-    # Convert to TFLite
+    """Convert a Keras model to TensorFlow Lite and save to disk."""
+    print("Converting to TensorFlow Lite...")
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    
+
     tflite_model = converter.convert()
-    
-    # Save the model
+
     with open(output_path, 'wb') as f:
         f.write(tflite_model)
-    
+
     print(f"TensorFlow Lite model saved to {output_path}")
     print(f"Model size: {len(tflite_model) / 1024:.2f} KB")
-    
+
     return output_path
 
 if __name__ == "__main__":

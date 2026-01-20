@@ -219,6 +219,19 @@
     </div>
 
     <script>
+        // Small helpers (beginner-friendly)
+        function normalizeUrl(url) {
+            return url.includes('://') ? url : 'http://' + url;
+        }
+
+        function safeParseUrl(url) {
+            try {
+                return new URL(normalizeUrl(url));
+            } catch (e) {
+                return null;
+            }
+        }
+
         // Same feature extraction as Android app
         function extractFeatures(url) {
             const urlLower = url.toLowerCase();
@@ -249,8 +262,8 @@
 
             // Domain features (5)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const domain = urlObj.hostname || urlObj.pathname.split('/')[0];
                 
                 features.push(domain.length);
@@ -270,8 +283,8 @@
 
             // Path features (2)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const path = urlObj.pathname;
                 features.push(path.length);
                 features.push((path.match(/\//g) || []).length);
@@ -281,8 +294,8 @@
 
             // Query features (2)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const query = urlObj.search.substring(1);
                 features.push(query.length);
                 features.push((query.match(/&/g) || []).length);
@@ -292,8 +305,8 @@
 
             // Port (1)
             try {
-                const normalizedUrl = url.includes('://') ? url : 'http://' + url;
-                const urlObj = new URL(normalizedUrl);
+                const urlObj = safeParseUrl(url);
+                if (!urlObj) throw new Error('Invalid URL');
                 const port = urlObj.port;
                 features.push(port && port !== '80' && port !== '443' ? 1 : 0);
             } catch (e) {

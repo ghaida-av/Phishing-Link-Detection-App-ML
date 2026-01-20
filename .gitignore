@@ -17,6 +17,10 @@ local.properties
 # Backend files
 backend/phishing_detector.db
 backend/phishing_model.pkl
+backend/phishing_model.tflite
 backend/__pycache__/
 backend/*.pyc
 backend/venv/
+
+# Android ML model (generated locally)
+app/src/main/assets/phishing_model.tflite

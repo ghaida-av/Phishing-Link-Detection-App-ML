@@ -12,6 +12,26 @@ except ImportError:
 from ml_model import PhishingURLDetector
 import os
 
+def load_interpreter(model_path: str) -> "tf.lite.Interpreter":
+    """Load and prepare a TFLite interpreter."""
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+    return interpreter
+
+def run_inference(interpreter: "tf.lite.Interpreter", features: np.ndarray) -> float:
+    """
+    Run inference and return phishing probability (0..1).
+    `features` must be shape (1, feature_count) float32.
+    """
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+
+    interpreter.set_tensor(input_details[0]["index"], features)
+    interpreter.invoke()
+
+    output_data = interpreter.get_tensor(output_details[0]["index"])
+    return float(output_data[0][0])
+
 def test_tflite_model(model_path='phishing_model.tflite'):
     """Test the TensorFlow Lite model"""
     
@@ -22,19 +42,13 @@ def test_tflite_model(model_path='phishing_model.tflite'):
         return False
     
     print(f"✅ Loading model: {model_path}")
-    
-    # Load the TFLite model
-    interpreter = tf.lite.Interpreter(model_path=model_path)
-    interpreter.allocate_tensors()
-    
-    # Get input and output tensors
+    interpreter = load_interpreter(model_path)
+
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-    
     print(f"📊 Model Input Shape: {input_details[0]['shape']}")
     print(f"📊 Model Output Shape: {output_details[0]['shape']}")
-    
-    # Initialize feature extractor
+
     detector = PhishingURLDetector()
     
     # Test URLs
@@ -60,17 +74,8 @@ def test_tflite_model(model_path='phishing_model.tflite'):
     total = len(test_urls)
     
     for url, expected_phishing in test_urls:
-        # Extract features
-        features = detector.extract_features(url)
-        features = features.reshape(1, -1).astype(np.float32)
-        
-        # Run inference
-        interpreter.set_tensor(input_details[0]['index'], features)
-        interpreter.invoke()
-        
-        # Get prediction
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        phishing_probability = float(output_data[0][0])
+        features = detector.extract_features(url).reshape(1, -1).astype(np.float32)
+        phishing_probability = run_inference(interpreter, features)
         is_phishing = phishing_probability > 0.5
         confidence = phishing_probability if is_phishing else (1 - phishing_probability)
         
@@ -103,25 +108,10 @@ def test_custom_url(model_path='phishing_model.tflite', url=None):
     if not url:
         url = input("Enter URL to test: ").strip()
     
-    # Load model
-    interpreter = tf.lite.Interpreter(model_path=model_path)
-    interpreter.allocate_tensors()
-    
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-    
-    # Extract features
+    interpreter = load_interpreter(model_path)
     detector = PhishingURLDetector()
-    features = detector.extract_features(url)
-    features = features.reshape(1, -1).astype(np.float32)
-    
-    # Run inference
-    interpreter.set_tensor(input_details[0]['index'], features)
-    interpreter.invoke()
-    
-    # Get prediction
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-    phishing_probability = float(output_data[0][0])
+    features = detector.extract_features(url).reshape(1, -1).astype(np.float32)
+    phishing_probability = run_inference(interpreter, features)
     is_phishing = phishing_probability > 0.5
     confidence = phishing_probability if is_phishing else (1 - phishing_probability)
     
