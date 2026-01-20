@@ -1,4 +1,4 @@
-# Backend Setup Guide
+# Backend Setup 
 
 ## Features Implemented
 
@@ -13,7 +13,7 @@
 cd backend
 ```
 
-2. **Create virtual environment** (if not already created):
+2. **Create virtual environment** :
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -56,7 +56,7 @@ Main prediction endpoint
 ```
 
 ### GET `/check?url=<url_or_email>`
-Quick check endpoint (GET method)
+Quick check endpoint 
 
 ### GET `/stats`
 Get database statistics
