@@ -1,7 +1,3 @@
-"""
-ML Model for Phishing URL Detection
-Uses feature extraction and a trained classifier
-"""
 import re
 import pickle
 import os
@@ -29,26 +25,26 @@ class PhishingURLDetector:
         
         # Basic URL features
         features.append(len(url))  # URL length
-        features.append(url.count('.'))  # Number of dots
-        features.append(url.count('-'))  # Number of hyphens
-        features.append(url.count('_'))  # Number of underscores
-        features.append(url.count('/'))  # Number of slashes
-        features.append(url.count('?'))  # Number of question marks
-        features.append(url.count('='))  # Number of equals signs
-        features.append(url.count('@'))  # Number of @ symbols
-        features.append(url.count('&'))  # Number of ampersands
+        features.append(url.count('.'))  # no of dots
+        features.append(url.count('-'))  # no of hyphens
+        features.append(url.count('_'))  # no of underscores
+        features.append(url.count('/'))  # no of slashes
+        features.append(url.count('?'))  # no of question marks
+        features.append(url.count('='))  # no of equals signs
+        features.append(url.count('@'))  # no of @ symbols
+        features.append(url.count('&'))  # no of ampersands
         
-        # Protocol features
+        # Protocol 
         features.append(1 if url.startswith('https://') else 0)
         features.append(1 if url.startswith('http://') else 0)
         features.append(1 if 'https' in url.lower() else 0)
         
         # Suspicious keywords
-        suspicious_keywords = ['login', 'verify', 'bank', 'secure', 'account', 
+        suspiciouswords = ['login', 'verify', 'bank', 'secure', 'account', 
                               'update', 'confirm', 'suspend', 'click', 'here',
                               'free', 'win', 'prize', 'urgent', 'limited']
-        keyword_count = sum(1 for keyword in suspicious_keywords if keyword in url.lower())
-        features.append(keyword_count)
+        wordcount = sum(1 for keyword in suspiciouswords if keyword in url.lower())
+        features.append(wordcount)
         
         # Domain features
         try:
@@ -58,22 +54,22 @@ class PhishingURLDetector:
             features.append(len(domain))  # Domain length
             features.append(domain.count('.'))  # Subdomain count
             
-            # Check for IP address in domain
+            # Check  IP address  domain
             ip_pattern = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
             features.append(1 if re.search(ip_pattern, domain) else 0)
             
-            # Check for suspicious TLD
+            # Check  suspicious TLD
             suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq']
             features.append(1 if any(tld in domain.lower() for tld in suspicious_tlds) else 0)
             
-            # Check for homoglyph/typosquatting (simplified)
+            # Check  homoglyph/typosquatting
             common_domains = ['google', 'facebook', 'amazon', 'microsoft', 'apple', 'paypal']
             features.append(1 if any(cd in domain.lower() for cd in common_domains) else 0)
             
         except:
             features.extend([0, 0, 0, 0, 0])
         
-        # Path features
+        # Path 
         try:
             parsed = urlparse(url if '://' in url else 'http://' + url)
             path = parsed.path
@@ -82,7 +78,7 @@ class PhishingURLDetector:
         except:
             features.extend([0, 0])
         
-        # Query string features
+        # Query string 
         try:
             parsed = urlparse(url if '://' in url else 'http://' + url)
             query = parsed.query
