@@ -1,16 +1,3 @@
-"""
-Threat intelligence helpers:
-- WHOIS lookup for domain creation date / age
-- Blacklist lookups (PhishTank, Google Safe Browsing)
-
-All external calls are optional and controlled via environment variables:
-- PHISHTANK_API_KEY
-- GSB_API_KEY  (Google Safe Browsing v4)
-
-If keys are missing or any error happens, the functions fail gracefully
-and simply return "unknown" / False flags.
-"""
-
 import os
 import socket
 from datetime import datetime, timezone
@@ -20,8 +7,8 @@ from urllib.parse import urlparse
 import requests
 
 try:
-    import whois  # from python-whois
-except Exception:  # pragma: no cover - library might be missing in some envs
+    import whois  #  python-whois
+except Exception:  #  library  missing in  envs
     whois = None
 
 
@@ -35,7 +22,7 @@ def _extract_domain(url: str) -> Optional[str]:
 
     url = url.strip()
 
-    # If no scheme, add http:// to help urlparse
+    #  no scheme, add http:// to  urlparse
     if "://" not in url:
         url = "http://" + url
 
@@ -45,7 +32,7 @@ def _extract_domain(url: str) -> Optional[str]:
         # Remove port if any
         if ":" in host:
             host = host.split(":", 1)[0]
-        # Strip www.
+        #  www.
         if host.startswith("www."):
             host = host[4:]
         return host or None
@@ -61,8 +48,8 @@ def get_domain_age_days(url: str) -> Dict[str, Any]:
     {
         "success": bool,
         "domain": str | None,
-        "creation_date": iso_str | None,
-        "age_days": int | None,
+        "creationdate": iso_str | None,
+        "agedays": int | None,
         "error": str | None,
     }
     """
@@ -70,8 +57,8 @@ def get_domain_age_days(url: str) -> Dict[str, Any]:
     result: Dict[str, Any] = {
         "success": False,
         "domain": domain,
-        "creation_date": None,
-        "age_days": None,
+        "creationdate": None,
+        "agedays": None,
         "error": None,
     }
 
@@ -84,16 +71,16 @@ def get_domain_age_days(url: str) -> Dict[str, Any]:
         return result
 
     try:
-        # Basic DNS check first to avoid long WHOIS timeouts on bad domains
+        #  DNS check first to avoid long WHOIS timeouts on bad domains
         try:
             socket.gethostbyname(domain)
         except Exception:
-            # Non‑resolvable domains are often junk; no age info
+            # Non‑resolvable domains are  junk
             result["error"] = "Domain does not resolve"
             return result
 
         w = whois.whois(domain)
-        creation = getattr(w, "creation_date", None)
+        creation = getattr(w, "creationdate", None)
         if isinstance(creation, list):
             creation = creation[0] if creation else None
 
@@ -106,18 +93,18 @@ def get_domain_age_days(url: str) -> Dict[str, Any]:
             creation = creation.replace(tzinfo=timezone.utc)
 
         now = datetime.now(timezone.utc)
-        age_days = max((now - creation).days, 0)
+        agedays = max((now - creation).days, 0)
 
         result.update(
             {
                 "success": True,
                 "creation_date": creation.isoformat(),
-                "age_days": age_days,
+                "age_days": agedays,
                 "error": None,
             }
         )
         return result
-    except Exception as e:  # pragma: no cover - defensive
+    except Exception as e:  # no cover - defensive
         result["error"] = str(e)
         return result
 
@@ -126,25 +113,25 @@ def check_phishtank(url: str) -> Dict[str, Any]:
     """
     Check URL against PhishTank.
 
-    Requires PHISHTANK_API_KEY environment variable.
+    Requires PHISHTANK-API environment variable.
     Returns dict:
     {
         "enabled": bool,
         "listed": bool | None,
-        "verified_phish": bool | None,
+        "verifiedphish": bool | None,
         "error": str | None,
     }
     """
-    api_key = os.getenv("PHISHTANK_API_KEY")
+    api_key = os.getenv("PHISHTANK-API")
     result: Dict[str, Any] = {
         "enabled": bool(api_key),
         "listed": None,
-        "verified_phish": None,
+        "verifiedphish": None,
         "error": None,
     }
 
     if not api_key:
-        result["error"] = "PHISHTANK_API_KEY not set"
+        result["error"] = "PHISHTANK-API not set"
         return result
 
     try:
@@ -153,20 +140,20 @@ def check_phishtank(url: str) -> Dict[str, Any]:
             data={
                 "url": url,
                 "format": "json",
-                "app_key": api_key,
+                "appkey": apikey,
             },
             timeout=5,
         )
         resp.raise_for_status()
         data = resp.json()
 
-        in_db = data.get("results", {}).get("in_database", False)
+        indb = data.get("results", {}).get("in_database", False)
         valid = data.get("results", {}).get("valid", False)
 
         result["listed"] = bool(in_db)
-        result["verified_phish"] = bool(valid) if in_db else False
+        result["verifiedphish"] = bool(valid) if indb else False
         return result
-    except Exception as e:  # pragma: no cover - external service
+    except Exception as e:  #  no cover - external service
         result["error"] = str(e)
         return result
 
@@ -175,25 +162,25 @@ def check_google_safe_browsing(url: str) -> Dict[str, Any]:
     """
     Check URL against Google Safe Browsing v4.
 
-    Requires GSB_API_KEY environment variable.
+    Requires GSB-API environment variable.
     Returns dict:
     {
         "enabled": bool,
         "unsafe": bool | None,
-        "threat_types": list | None,
+        "threattypes": list | None,
         "error": str | None,
     }
     """
-    api_key = os.getenv("GSB_API_KEY")
+    api_key = os.getenv("GSB-API")
     result: Dict[str, Any] = {
         "enabled": bool(api_key),
         "unsafe": None,
-        "threat_types": None,
+        "threattypes": None,
         "error": None,
     }
 
     if not api_key:
-        result["error"] = "GSB_API_KEY not set"
+        result["error"] = "GSB-API not set"
         return result
 
     try:
@@ -234,7 +221,7 @@ def check_google_safe_browsing(url: str) -> Dict[str, Any]:
             result["threat_types"] = []
 
         return result
-    except Exception as e:  # pragma: no cover - external service
+    except Exception as e:  #  no cover - external service
         result["error"] = str(e)
         return result
 
@@ -254,15 +241,15 @@ def get_threat_intel(url: str) -> Dict[str, Any]:
 
     # High‑level flags that can be used by callers
     listed_blacklist = bool(
-        (phishtank_info.get("enabled") and phishtank_info.get("verified_phish"))
+        (phishtank_info.get("enabled") and phishtank_info.get("verifiedphish"))
         or (gsb_info.get("enabled") and gsb_info.get("unsafe"))
     )
 
     very_young_domain = (
         whois_info.get("success")
-        and isinstance(whois_info.get("age_days"), int)
-        and whois_info["age_days"] >= 0
-        and whois_info["age_days"] < 30
+        and isinstance(whois_info.get("agedays"), int)
+        and whois_info["agedays"] >= 0
+        and whois_info["agedays"] < 30
     )
 
     return {
