@@ -1,30 +1,27 @@
-"""
-URL and Email Validator
-Differentiates between URLs and emails, validates them
-"""
+
 import re
 from urllib.parse import urlparse
 
 
 class URLValidator:
-    """Validates URLs and emails, differentiates between them"""
+  
     
-    # Email  pattern
+  
     EMAIL_PATTERN = re.compile(
         r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     )
     
-    # URL  pattern 
+
     URL_PATTERN = re.compile(
         r'^https?://'  # http:// or https://
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|' 
         r'localhost|'  # localhost...
         r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
         r'(?::\d+)?'  # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE
     )
     
-    # for URLs without protocol
+   
     URLPATTERN = re.compile(
         r'^(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'
         r'localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
@@ -33,7 +30,7 @@ class URLValidator:
     
     @staticmethod
     def is_email(text: str) -> bool:
-        """Check if input is  email address"""
+       
         if not text:
             return False
         
@@ -42,44 +39,43 @@ class URLValidator:
     
     @staticmethod
     def is_url(text: str) -> bool:
-        """Check if input is a URL"""
+        
         if not text:
             return False
         
         text = text.strip()
         
-        # Check if it is  email  
+     
         if URLValidator.is_email(text):
             return False
         
-        # Check full URL pattern with protocol
+       
         if URLValidator.URL_PATTERN.match(text):
             return True
-        
-        # Check  URL pattern without protocol
+       
         if URLValidator.URLPATTERN .match(text):
             return True
         
-        #  if it starts with www. or contains common TLDs
+      
         if text.lower().startswith('www.'):
             return True
         
-        # Check for common TLDs
+        
         common_tlds = ['.com', '.org', '.net', '.edu', '.gov', '.io', '.co', 
                       '.uk', '.de', '.fr', '.jp', '.cn', '.au', '.ca']
         if any(text.lower().endswith(tld) or f'.{tld}' in text.lower() 
                for tld in common_tlds):
-            # Make sure it's not just a domain name that's part of an email
+         
             if '@' not in text:
                 return True
         
-        # Try parsing as URL
+        
         try:
-            # Add protocol if missing
+            
             test_url = text if '://' in text else 'http://' + text
             parsed = urlparse(test_url)
             
-            # Must have at least a netloc (domain) or a valid path
+           
             if parsed.netloc or (parsed.path and '.' in parsed.path):
                 return True
         except:
@@ -95,15 +91,15 @@ class URLValidator:
         if not url:
             return url
         
-        # If it's an email, return as is
+       
         if URLValidator.is_email(url):
             return url
         
-        # If it already has a protocol, return as is
+        
         if '://' in url:
             return url
         
-        # Add http:// if it looks like a URL
+       
         if URLValidator.is_url(url):
             return 'http://' + url
         
@@ -128,15 +124,13 @@ class URLValidator:
         
         text = text.strip()
         
-        # Check if it's an email
         if URLValidator.is_email(text):
             return {
                 'is_valid': True,
                 'type': 'email',
                 'normalized': text.lower()
             }
-        
-        # Check if it's a URL
+      
         if URLValidator.is_url(text):
             normalized = URLValidator.normalize_url(text)
             return {
@@ -144,8 +138,7 @@ class URLValidator:
                 'type': 'url',
                 'normalized': normalized.lower()
             }
-        
-        # Invalid input
+     
         return {
             'is_valid': False,
             'type': 'invalid',
