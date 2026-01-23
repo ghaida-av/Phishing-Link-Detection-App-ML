@@ -4,9 +4,6 @@ This script creates a TensorFlow model with the same feature extraction
 and converts it to TensorFlow Lite for Android
 """
 
-# This script is intentionally simple: train a small Keras model using the same
-# feature extractor/training data, then export to `.tflite` for Android.
-
 try:
     import tensorflow as tf
 except ImportError:
@@ -18,7 +15,6 @@ except ImportError:
 from ml_model import PhishingURLDetector
 
 def create_tf_model():
-    """Train a small TensorFlow model using the same training data/features."""
     detector = PhishingURLDetector()
 
     print("Generating training data...")
@@ -27,7 +23,6 @@ def create_tf_model():
     print(f"Training TensorFlow model on {len(X)} samples...")
     print(f"Feature vector size: {X.shape[1]}")
 
-    # A small neural network is enough for this toy dataset.
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
         tf.keras.layers.Dropout(0.2),
@@ -50,7 +45,6 @@ def create_tf_model():
     return model
 
 def convert_to_tflite(model, output_path='phishing_model.tflite'):
-    """Convert a Keras model to TensorFlow Lite and save to disk."""
     print("Converting to TensorFlow Lite...")
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
@@ -72,5 +66,10 @@ if __name__ == "__main__":
     print("\nConverting to TensorFlow Lite...")
     tflite_path = convert_to_tflite(model)
     
-    print(f"\n✅ Success! Model saved to: {tflite_path}")
+    print(f"\n Success! Model saved to: {tflite_path}")
     print("Copy this file to: app/src/main/assets/phishing_model.tflite")
+
+
+
+
+
