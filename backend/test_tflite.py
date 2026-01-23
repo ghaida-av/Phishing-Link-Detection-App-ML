@@ -90,7 +90,7 @@ def test_tflite_model(model_path='phishing_model.tflite'):
 
 def test_custom_url(model_path='phishing_model.tflite', url=None):
     if not os.path.exists(model_path):
-        print(f"❌ Model file not found: {model_path}")
+        print(f" Model file not found: {model_path}")
         return False
 
     if not url:
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         test_tflite_model()
 
         print("\n" + "=" * 80)
-        print("💡 Tip: Test a custom URL by running:")
+        print(" Test a custom URL by running:")
         print("   python test_tflite.py 'https://example.com'")
         print("=" * 80)
 
