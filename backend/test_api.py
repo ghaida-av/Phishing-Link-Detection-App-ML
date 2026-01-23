@@ -1,6 +1,4 @@
-"""
-Test script for the Phishing Detection API
-"""
+
 import requests
 import json
 
@@ -47,25 +45,25 @@ def test_recent():
 
 if __name__ == "__main__":
     print("Testing Phishing Detection API")
-    print("Make sure the Flask server is running on port 5001")
+    print("Is Flask server is running on port 5001")
     
-    # Test various inputs
+  
     test_cases = [
-        "https://www.google.com",  # Safe URL
-        "https://www.google.com-login.verify.tk",  # Phishing URL
-        "test@example.com",  # Email
-        "https://www.github.com",  # Safe URL
-        "http://192.168.1.1/login",  # Suspicious URL
-        "invalid-input-123",  # Invalid
+        "https://www.google.com",  
+        "https://www.google.com-login.verify.tk", 
+        "test@example.com",  
+        "https://www.github.com",  
+        "http://192.168.1.1/login", 
+        "invalid-input-123", 
     ]
     
     for test_case in test_cases:
         test_predict(test_case)
     
-    # Test stats
+   
     test_stats()
     
-    # Test recent
+   
     test_recent()
     
     print("\n" + "="*60)
